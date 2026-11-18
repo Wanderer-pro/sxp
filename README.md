@@ -68,11 +68,10 @@ python -m http.server 8080
 
 ```
 index.html        # 整站（HTML + CSS + JS 全在里面）
-预览-桌面.png      # 截图，仅用于文档展示
-预览-手机.png
 deploy.ps1        # 一键部署脚本
-deploy.cmd        # 双击即可运行 deploy.ps1（绕过脚本执行策略）
+deploy.cmd        # 双击运行 deploy.ps1（绕过脚本执行策略）
 .nojekyll         # 告诉 GitHub Pages 不要跑 Jekyll
+.gitignore
 README.md
 ```
 
