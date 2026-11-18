@@ -25,16 +25,18 @@ python -m http.server 8080
 
 ### 2. 绑定远程并推送
 
-在本目录打开 PowerShell，执行（把 URL 换成你的）：
+**最简单：双击 `deploy.cmd`**，按提示把仓库地址粘进去、回车。脚本会自动提交、推送 `main`、再同步到 `gh-pages`。
+
+也可以在本目录的 PowerShell 里直接跑：
 
 ```powershell
 .\deploy.ps1 https://github.com/你的用户名/仓库名.git
 ```
 
-> 如果提示「禁止运行脚本」，改用 `deploy.cmd` 双击运行，或执行：
+> 本机默认禁止运行 PowerShell 脚本。如果提示「禁止运行脚本」，改用：
 > `powershell -ExecutionPolicy Bypass -File .\deploy.ps1 https://github.com/你的用户名/仓库名.git`
 
-首次推送会弹出浏览器让你登录 GitHub（Git Credential Manager），登录一次之后就不用了。
+首次推送会弹出浏览器让你登录 GitHub（Git Credential Manager），登录一次后不再询问。
 
 ### 3. 开启 Pages
 
@@ -79,6 +81,16 @@ README.md
 - `main` = 源码，想改就改
 - `gh-pages` = 实际发布的文件，由脚本从 `main` 强推覆盖
 - 两者分开，发布时不会把开发历史带到线上
+
+## 提交身份
+
+本仓库的提交身份已设为 **单晓鹏 / mastermaster2024@163.com**（只对这个仓库生效，没动全局配置）。
+想换成你 GitHub 上绑定的邮箱，在本目录执行：
+
+```powershell
+git config user.name "你的名字"
+git config user.email "你的邮箱"
+```
 
 ## 常见问题
 

@@ -8,8 +8,8 @@
 
     做了什么：
       1. 把当前目录的改动提交到 main
-      2. 推送 main 到 GitHub
-      3. 把 main 强推到 gh-pages 分支（GitHub Pages 从这里取文件）
+      2. 推送 main 到 GitHub（远端已有 README 时自动以远端历史为基底）
+      3. 把 main 推送到 gh-pages 分支（GitHub Pages 从这里取文件）
 #>
 param(
     [Parameter(Position = 0)][string]$Remote = '',
@@ -24,6 +24,22 @@ function Write-Ok($text) { Write-Host "[OK] $text" -ForegroundColor Green }
 function Fail($text) {
     Write-Host "[X] $text" -ForegroundColor Red
     exit 1
+}
+
+# 静默执行 git 并返回退出码。
+# PowerShell 会把 git 写到 stderr 的普通提示当成错误，这里统一吞掉，避免脚本被打断。
+function Invoke-GitQuiet {
+    param([Parameter(ValueFromRemainingArguments = $true)][string[]]$GitArgs)
+    $old = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    $code = 0
+    try {
+        & git @GitArgs *> $null
+        $code = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $old
+    }
+    return $code
 }
 
 if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
@@ -46,16 +62,22 @@ if ($Remote) {
     } else {
         git remote add origin $Remote
     }
-    Write-Step "远程仓库：$Remote"
 }
 
 if (@(git remote) -notcontains 'origin') {
     Write-Host ''
     Write-Host '还没有绑定远程仓库。' -ForegroundColor Yellow
-    Write-Host '请先在 GitHub 新建一个空仓库（Public），然后运行：'
-    Write-Host '    .\deploy.ps1 https://github.com/你的用户名/仓库名.git' -ForegroundColor White
+    Write-Host '请先打开 https://github.com/new 新建一个空仓库：'
+    Write-Host '  - 可见性选 Public（免费账号只有公开仓库能开 Pages）'
+    Write-Host '  - 不要勾选 README / .gitignore / license'
     Write-Host ''
-    exit 1
+    $repoUrl = Read-Host '粘贴仓库地址（如 https://github.com/你的用户名/仓库名.git），直接回车退出'
+    if (-not $repoUrl) {
+        Write-Host '已取消。' -ForegroundColor Yellow
+        exit 1
+    }
+    git remote add origin $repoUrl.Trim()
+    Write-Step "远程仓库：$repoUrl"
 }
 
 # ---------- 3. 提交本地改动 ----------
@@ -76,10 +98,23 @@ if ($branch -ne 'main') {
 Write-Step '推送 main ...'
 git push -u origin main
 if ($LASTEXITCODE -ne 0) {
-    Fail '推送 main 失败。检查网络、仓库地址，或先在浏览器登录 GitHub。'
+    Write-Host '  推送被拒绝：远端仓库里已经有文件（通常是建仓库时勾了 README）。' -ForegroundColor Yellow
+    $null = Invoke-GitQuiet fetch origin
+    if ((Invoke-GitQuiet ls-remote --exit-code --heads origin main) -eq 0) {
+        Write-Step '以远端历史为基底，把本地文件重新提交上去 ...'
+        $null = Invoke-GitQuiet reset --soft origin/main
+        git add -A
+        $null = Invoke-GitQuiet commit -m 'site: 首次发布个人主页'
+        git push -u origin main
+        if ($LASTEXITCODE -ne 0) {
+            Fail '推送 main 仍然失败。检查网络，或到仓库 Settings 里确认分支保护规则。'
+        }
+    } else {
+        Fail '推送 main 失败。检查仓库地址、网络，或先在浏览器登录 GitHub。'
+    }
 }
 
-# ---------- 5. 同步到 gh-pages ----------
+# ---------- 5. 发布到 gh-pages ----------
 Write-Step '同步到 gh-pages ...'
 git push -f origin main:gh-pages
 if ($LASTEXITCODE -ne 0) {
